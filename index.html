@@ -125,11 +125,9 @@
   </div>
 
   <script>
-    // === Configuration ===
-    const OPENWEATHER_KEY = "YOUR_OPENWEATHER_API_KEY"; // ← replace with your key
-    const ENDPOINT_CURRENT = (q)=>`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(q)}&appid=${OPENWEATHER_KEY}&units=metric`;
-    const ENDPOINT_CURRENT_COORD = (lat,lon)=>`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric`;
-    const ENDPOINT_FORECAST = (q)=>`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(q)}&appid=${OPENWEATHER_KEY}&units=metric`;
+    // === Zero-key Weather using Open-Meteo ===
+    const GEO = (q)=>`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`;
+    const FORE = (lat, lon)=>`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=7`;
 
     // === Elements ===
     const elCity = document.getElementById('city');
@@ -147,15 +145,81 @@
     const fBtn = document.getElementById('f');
     const geoBtn = document.getElementById('geo-btn');
 
-    let state = { tempC: null, unit: 'C', city: null };
+    let state = { tempC: null, unit: 'C', city: null, coords: null };
 
-    function formatDate(dt){
-      const d = new Date(dt*1000);
+    function formatDate(ts){
+      const d = new Date(ts);
       return d.toLocaleString(undefined,{weekday:'long', hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
     }
-    function iconUrl(code){
-      return `https://openweathermap.org/img/wn/${code}@2x.png`;
+
+    function codeToEmoji(code){
+      const map = new Map([
+        [[0], '☀️ Clear'],
+        [[1,2], '🌤️ Partly cloudy'],
+        [[3], '☁️ Cloudy'],
+        [[45,48], '🌫️ Fog'],
+        [[51,53,55], '🌦️ Drizzle'],
+        [[56,57], '🌧️ Freezing drizzle'],
+        [[61,63,65], '🌧️ Rain'],
+        [[66,67], '🌧️ Freezing rain'],
+        [[71,73,75], '🌨️ Snow'],
+        [[77], '🌨️ Snow grains'],
+        [[80,81,82], '🌧️ Showers'],
+        [[85,86], '🌨️ Snow showers'],
+        [[95], '⛈️ Thunderstorm'],
+        [[96,99], '⛈️ Thunderstorm + hail']
+      ]);
+      for (const [keys, label] of map){ if(keys.includes(code)) return label; }
+      return '🌡️ Weather';
     }
+
+    function showError(msg=''){ elError.textContent = msg; }
+
+    async function fetchJSON(url){
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function loadByCoords(lat, lon, label){
+      try{
+        showError('');
+        elCity.textContent = label || 'Loading…';
+        elDesc.textContent = '—';
+        elTemp.textContent = '–';
+        elIcon.src = '';
+
+        const data = await fetchJSON(FORE(lat, lon));
+        renderCurrentFromForecast(data, label);
+        renderForecast(data);
+      }catch(err){
+        console.error(err);
+        showError('Could not load weather for those coordinates.');
+        elCity.textContent = '—';
+      }
+    }
+
+    async function loadCity(q){
+      try{
+        showError('');
+        elCity.textContent = 'Searching…';
+        const geo = await fetchJSON(GEO(q));
+        if(!geo || !geo.results || geo.results.length === 0){
+          showError('City not found. Try another search.');
+          elCity.textContent = '—';
+          return;
+        }
+        const g = geo.results[0];
+        const label = `${g.name}${g.admin1 ? ', ' + g.admin1 : ''}${g.country ? ', ' + g.country : ''}`;
+        state.coords = {lat: g.latitude, lon: g.longitude};
+        await loadByCoords(g.latitude, g.longitude, label);
+      }catch(err){
+        console.error(err);
+        showError('City not found. Try another search.');
+        elCity.textContent = '—';
+      }
+    }
+
     function setUnits(active){
       state.unit = active;
       cBtn.classList.toggle('active', active==='C');
@@ -164,90 +228,41 @@
         elTemp.textContent = active==='C' ? Math.round(state.tempC) + '°' : Math.round(state.tempC*9/5+32) + '°';
       }
     }
-    function showError(msg){
-      elError.textContent = msg || '';
-    }
 
-    async function fetchJSON(url){
-      const res = await fetch(url);
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }
-
-    async function loadCity(q){
-      try{
-        showError('');
-        elCity.textContent = 'Loading…';
-        elDesc.textContent = '—';
-        elTemp.textContent = '–';
-        elIcon.src = '';
-        const [current, forecast] = await Promise.all([
-          fetchJSON(ENDPOINT_CURRENT(q)),
-          fetchJSON(ENDPOINT_FORECAST(q))
-        ]);
-        renderCurrent(current);
-        renderForecast(forecast);
-      }catch(err){
-        console.error(err);
-        showError('City not found. Try another search.');
-        elCity.textContent = '—';
-      }
-    }
-
-    function renderCurrent(data){
-      state.city = `${data.name}, ${data.sys?.country ?? ''}`.trim();
+    function renderCurrentFromForecast(data, label){
+      // current
+      state.city = label || '—';
       elCity.textContent = state.city;
-      elDate.textContent = formatDate(data.dt);
-      const w = data.weather?.[0];
-      elDesc.textContent = w?.description || '—';
-      elIcon.src = w ? iconUrl(w.icon) : '';
-      elIcon.alt = w?.main || '';
-      state.tempC = data.main?.temp ?? null;
+      elDate.textContent = formatDate(Date.now());
+      const current = data.current;
+      const code = current.weather_code;
+      const em = codeToEmoji(code);
+      elDesc.textContent = em.split(' ').slice(1).join(' ') || em; // Text label
+      elIcon.alt = elDesc.textContent;
+      elIcon.src = '';// (emoji shown in description)
+      state.tempC = current.temperature_2m ?? null;
       setUnits(state.unit);
-      elHumidity.textContent = Math.round(data.main?.humidity ?? 0);
-      elWind.textContent = (data.wind?.speed ?? 0).toFixed(1);
-    }
-
-    function groupDailyFrom3h(list){
-      // group by date (local to item timezone not available; use UTC date)
-      const byDay = new Map();
-      list.forEach(item=>{
-        const d = new Date(item.dt*1000);
-        const key = d.getUTCFullYear()+"-"+(d.getUTCMonth()+1)+"-"+d.getUTCDate();
-        if(!byDay.has(key)) byDay.set(key,[]);
-        byDay.get(key).push(item);
-      });
-      // pick around midday sample where available, else average
-      const days = [];
-      for(const [k, arr] of byDay){
-        let pick = arr.reduce((best,it)=>{
-          const hour = new Date(it.dt*1000).getUTCHours();
-          const score = Math.abs(12-hour);
-          return (best==null || score < best.score) ? {it, score} : best;
-        }, null)?.it;
-        if(!pick){ pick = arr[Math.floor(arr.length/2)]; }
-        const min = Math.min(...arr.map(a=>a.main.temp_min));
-        const max = Math.max(...arr.map(a=>a.main.temp_max));
-        days.push({ dt: pick.dt, icon: pick.weather?.[0]?.icon, min, max });
-      }
-      // return next 6 excluding today
-      const todayKey = new Date().getUTCFullYear()+"-"+(new Date().getUTCMonth()+1)+"-"+new Date().getUTCDate();
-      return days
-        .filter(d=>{
-          const dd = new Date(d.dt*1000);
-          const key = dd.getUTCFullYear()+"-"+(dd.getUTCMonth()+1)+"-"+dd.getUTCDate();
-          return key !== todayKey;
-        })
-        .slice(0,6);
+      elHumidity.textContent = Math.round(current.relative_humidity_2m ?? 0);
+      elWind.textContent = (current.wind_speed_10m ?? 0).toFixed(1);
     }
 
     function renderForecast(data){
-      const days = groupDailyFrom3h(data.list || []);
+      const daily = data.daily;
+      const days = [];
+      for(let i=1; i<Math.min(daily.time.length,7); i++){ // skip today, next 6
+        days.push({
+          ts: new Date(daily.time[i]).getTime(),
+          code: daily.weather_code[i],
+          min: daily.temperature_2m_min[i],
+          max: daily.temperature_2m_max[i]
+        });
+      }
       elForecast.innerHTML = days.map(d=>{
-        const name = new Date(d.dt*1000).toLocaleDateString(undefined,{weekday:'short'});
+        const name = new Date(d.ts).toLocaleDateString(undefined,{weekday:'short'});
+        const label = codeToEmoji(d.code).split(' ')[0]; // emoji only
         return `<div class="day">
           <div class="name">${name}</div>
-          <img src="${iconUrl(d.icon)}" alt="" width="60" height="60" />
+          <div style="font-size:32px;line-height:1.2">${label}</div>
           <div class="t">${Math.round(d.max)}° / ${Math.round(d.min)}°</div>
         </div>`;
       }).join('');
@@ -262,26 +277,14 @@
     cBtn.addEventListener('click', ()=> setUnits('C'));
     fBtn.addEventListener('click', ()=> setUnits('F'));
 
-    geoBtn.addEventListener('click', async ()=>{
+    geoBtn.addEventListener('click', ()=>{
       if(!navigator.geolocation){ showError('Geolocation not supported.'); return; }
-      showError('');
       elCity.textContent = 'Locating…';
-      navigator.geolocation.getCurrentPosition(async (pos)=>{
-        try{
-          const {latitude:lat, longitude:lon} = pos.coords;
-          const current = await fetchJSON(ENDPOINT_CURRENT_COORD(lat,lon));
-          renderCurrent(current);
-          // for forecast, use name we just resolved
-          if(current.name) {
-            const forecast = await fetchJSON(ENDPOINT_FORECAST(current.name));
-            renderForecast(forecast);
-          }
-        }catch(err){
-          console.error(err); showError('Could not get your local weather.');
-        }
-      }, (err)=>{
-        showError('Location permission denied.');
-      }, {enableHighAccuracy:false, timeout:8000});
+      navigator.geolocation.getCurrentPosition((pos)=>{
+        const {latitude:lat, longitude:lon} = pos.coords;
+        state.coords = {lat, lon};
+        loadByCoords(lat, lon, 'My location');
+      }, ()=> showError('Location permission denied.'), {enableHighAccuracy:false, timeout:8000});
     });
 
     // Initial city
@@ -289,4 +292,5 @@
   </script>
 </body>
 </html>
+
 
