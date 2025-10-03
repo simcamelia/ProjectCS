@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather App (No API Key)</title>
+    <style>
+      /* ====== Global / Page ====== */
+      :root {
+        --bg: #0f172a; /* page background */
+        --panel: #111827; /* card/panel background */
+        --text: #e5e7eb; /* main text */
+        --muted: #a1a1aa; /* secondary text */
+        --accent: #22d3ee; /* cyan accent */
+        --accent-2: #8b5cf6; /* violet accent */
+        --border: 1px solid rgba(255, 255, 255, 0.08);
+        --shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+        --radius: 14px;
+      }
+
+      /* Page background and base text */
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial,
+          sans-serif;
+        color: var(--text);
+        text-align: center;
+
+        /* Background properties (kept away from forecast section) */
+        background-color: var(--bg);
+        background-image: radial-gradient(
+            1000px 500px at -10% -10%,
+            rgba(34, 211, 238, 0.18),
+            transparent 60%
+          ),
+          radial-gradient(
+            800px 400px at 110% 0%,
+            rgba(139, 92, 246, 0.18),
+            transparent 60%
+          ),
+          linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.03),
+            rgba(0, 0, 0, 0.25)
+          );
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        background-position: center;
+        padding: 24px 16px 40px;
+      }
+
+      /* Main app “card” */
+      .weather-app {
+        max-width: 720px;
+        margin: 0 auto;
+        background: var(--panel);
+        border: var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      /* ====== Header / Search (EXCLUDES forecast) ====== */
+      header {
+        padding: 16px;
+        border-bottom: var(--border);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0)
+        );
+      }
+
+      #search-form {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      #search-input {
+        flex: 1 1 260px;
+        max-width: 380px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: var(--border);
+        background: #0b1220;
+        color: var(--text);
+        outline: none;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+      }
+      #search-input::placeholder {
+        color: #94a3b8;
+      }
+      #search-input:focus {
+        border-color: rgba(34, 211, 238, 0.55);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+      }
+
+      button {
+        cursor: pointer;
+        border: var(--border);
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        transition: transform 0.18s ease, filter 0.18s ease;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.05);
+      }
+      button:active {
+        transform: translateY(0);
+      }
+
+      /* “Current location” as secondary style while keeping same structure */
+      #current-location-button {
+        background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+      }
+
+      /* ====== Main current weather block (EXCLUDES forecast) ====== */
+      main {
+        padding: 28px 22px 8px;
+      }
+
+      h1#city {
+        margin: 0 0 6px;
+        font-size: clamp(1.6rem, 4vw, 2.2rem);
+        letter-spacing: 0.3px;
+      }
+
+      #date-time {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      /* Temperature row */
+      main > div:first-of-type {
+        display: inline-flex;
+        gap: 8px;
+        align-items: baseline;
+        justify-content: center;
+        background: #0b1220;
+        border: var(--border);
+        border-radius: 12px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      #temperature,
+      #temperature-f {
+        font-size: 1.35rem;
+        font-weight: 800;
+      }
+
+      #description {
+        margin: 8px auto 14px;
+        color: var(--muted);
+        max-width: 50ch;
+      }
+
+      /* Metrics list (humidity/wind) */
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 12px auto 8px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      ul li {
+        background: #0b1220;
+        border: var(--border);
+        padding: 10px 12px;
+        border-radius: 10px;
+        min-width: 140px;
+        font-weight: 600;
+      }
+      ul li span {
+        color: var(--accent);
+      }
+
+      /* ====== Forecast section styles — LEFT UNCHANGED per your request ====== */
+      .forecast-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .forecast-day {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+
+      /* ====== Footer ====== */
+      footer {
+        margin-top: 16px;
+        padding: 16px 10px 22px;
+        border-top: var(--border);
+        background: linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0)
+        );
+      }
+      footer p {
+        color: red;
+        font-weight: bold;
+        font-style: italic;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="weather-app">
+      <header>
+        <form id="search-form">
+          <input
+            type="search"
+            id="search-input"
+            placeholder="Enter a city.."
+            autocomplete="off"
+          />
+          <button type="submit">Search</button>
+          <button type="button" id="current-location-button">
+            Current location
+          </button>
+        </form>
+      </header>
+
+      <main>
+        <h1 id="city">Paris</h1>
+        <p id="date-time"></p>
+        <div>
+          <span id="temperature"></span>°C | <span id="temperature-f"></span>°F
+        </div>
+        <p id="description"></p>
+        <ul>
+          <li>Humidity: <span id="humidity"></span>%</li>
+          <li>Wind: <span id="wind"></span> km/h</li>
+        </ul>
+      </main>
+
+      <!-- Forecast section left as-is -->
+      <section class="forecast">
+        <h2>7-Day Forecast</h2>
+        <div class="forecast-grid" id="forecast"></div>
+      </section>
+
+      <footer>
+        <p>This app was built by Camelia Simion</p>
+      </footer>
+    </div>
+
+    <script>
+      function cToF(c) {
+        return ((c * 9) / 5 + 32).toFixed(1);
+      }
+
+      async function geocodeCity(city) {
+        let url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+          city
+        )}&count=1&language=en&format=json`;
+        let response = await fetch(url);
+        let data = await response.json();
+        if (!data.results || data.results.length === 0)
+          throw new Error("City not found");
+        return data.results[0]; // contains name, country, latitude, longitude
+      }
+
+      async function fetchWeather(lat, lon) {
+        let url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,windspeed_10m_max&timezone=auto`;
+        let response = await fetch(url);
+        return await response.json();
+      }
+
+      function displayWeather(cityName, country, weatherData) {
+        document.getElementById("city").textContent = `${cityName}, ${country}`;
+        document.getElementById("date-time").textContent =
+          new Date().toLocaleString();
+
+        let current = weatherData.current_weather;
+        document.getElementById("temperature").textContent =
+          current.temperature.toFixed(1);
+        document.getElementById("temperature-f").textContent = cToF(
+          current.temperature
+        );
+        document.getElementById(
+          "description"
+        ).textContent = `Windspeed ${current.windspeed} km/h`;
+        document.getElementById("humidity").textContent = "--"; // not provided by this endpoint
+        document.getElementById("wind").textContent = current.windspeed;
+
+        // 7-day forecast (markup + existing CSS untouched)
+        let forecastEl = document.getElementById("forecast");
+        forecastEl.innerHTML = "";
+        weatherData.daily.time.slice(0, 7).forEach((day, i) => {
+          let date = new Date(day).toLocaleDateString(undefined, {
+            weekday: "short",
+          });
+          let maxC = weatherData.daily.temperature_2m_max[i];
+          let minC = weatherData.daily.temperature_2m_min[i];
+          forecastEl.innerHTML += `
+          <div class="forecast-day">
+            <div>${date}</div>
+            <div>${maxC}°C / ${cToF(maxC)}°F</div>
+            <div>${minC}°C / ${cToF(minC)}°F</div>
+          </div>`;
+        });
+      }
+
+      async function searchCity(city) {
+        try {
+          let geo = await geocodeCity(city);
+          let weather = await fetchWeather(geo.latitude, geo.longitude);
+          displayWeather(geo.name, geo.country, weather);
+        } catch (err) {
+          alert(err.message);
+        }
+      }
+
+      function getCurrentLocation() {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          let lat = pos.coords.latitude;
+          let lon = pos.coords.longitude;
+          let weather = await fetchWeather(lat, lon);
+          displayWeather("Your Location", "", weather);
+        });
+      }
+
+      document.getElementById("search-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        searchCity(document.getElementById("search-input").value);
+      });
+
+      document
+        .getElementById("current-location-button")
+        .addEventListener("click", getCurrentLocation);
+
+      // Load default city
+      searchCity("Paris");
+    </script>
+    <script>
+      // 🔎 Simple log so you can see it ran
+      console.log("Weather prompt script loaded");
+
+      // Weather data object
+      const weather = {
+        paris: { tempC: 18.3, tempF: 64.9, humidity: 77 },
+        tokyo: { tempC: 22.6, tempF: 72.7, humidity: 65 },
+        lisbon: { tempC: 25.1, tempF: 77.2, humidity: 55 },
+        sanfrancisco: { tempC: 16.8, tempF: 62.3, humidity: 80 },
+        oslo: { tempC: 12.4, tempF: 54.3, humidity: 70 },
+      };
+
+      function titleCaseCity(input) {
+        return input
+          .trim()
+          .toLowerCase()
+          .split(/\s+/)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+      }
+
+      window.addEventListener("load", () => {
+        // Small timeout helps some preview iframes allow prompts/alerts
+        setTimeout(() => {
+          const raw = prompt("Enter a city");
+          if (!raw) return;
+
+          const key = raw.trim().toLowerCase().replace(/\s+/g, "");
+          const display = titleCaseCity(raw);
+
+          if (weather[key]) {
+            const { tempC, tempF, humidity } = weather[key];
+            const c = Math.round(tempC);
+            const f = Math.round(tempF);
+            const h = Math.round(humidity);
+            alert(
+              `It is currently ${c}°C (${f}°F) in ${display} with a humidity of ${h}%`
+            );
+          } else {
+            alert(
+              `Sorry, we don't know the weather for this city, try going to https://www.google.com/search?q=weather+${display}`
+            );
+          }
+        }, 200);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>City Weather Prompt + Search</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #22d3ee;
+        --radius: 12px;
+        --border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      body {
+        margin: 0;
+        font: 16px/1.5 system-ui, Segoe UI, Roboto, Inter, Arial;
+        color: var(--text);
+        background: var(--bg);
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+      }
+      .card {
+        width: min(720px, 92vw);
+        background: var(--panel);
+        border: var(--border);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+      h1 {
+        margin: 0.25rem 0 0.5rem;
+        font-size: 1.35rem;
+      }
+      #current-date-time {
+        color: var(--muted);
+        margin: 0.35rem 0 1rem;
+      }
+      form {
+        display: flex;
+        gap: 10px;
+        margin: 0.5rem 0 0;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: var(--border);
+        background: #0b1220;
+        color: var(--text);
+        outline: none;
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: var(--border);
+        cursor: pointer;
+        color: #fff;
+        background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+      }
+      #city-result {
+        margin: 0.8rem 0 0;
+        min-height: 1.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Weather Prompt + Search</h1>
+      <!-- Current day & time -->
+      <p id="current-date-time"></p>
+
+      <!-- City search -->
+      <form id="city-search" autocomplete="off">
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Enter a city"
+          required
+        />
+        <button type="submit">Search</button>
+      </form>
+      <!-- Display searched city name -->
+      <h2 id="city-result"></h2>
+    </div>
+
+    <script>
+      // ---------- Utilities ----------
+      function two(n) {
+        return n < 10 ? "0" + n : "" + n;
+      }
+      function formatDayTime(dateObj = new Date()) {
+        const days = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
+        return `${days[dateObj.getDay()]} ${two(dateObj.getHours())}:${two(
+          dateObj.getMinutes()
+        )}`;
+      }
+      function titleCaseCity(input) {
+        return input
+          .trim()
+          .toLowerCase()
+          .split(/\s+/)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+      }
+      function keyFromCity(input) {
+        // keys in our object have no spaces and are lowercase
+        return input.trim().toLowerCase().replace(/\s+/g, "");
+      }
+
+      // ---------- Clock (Tuesday 16:00 style) ----------
+      const dtEl = document.getElementById("current-date-time");
+      function updateClock() {
+        dtEl.textContent = formatDayTime(new Date());
+      }
+      updateClock();
+      setInterval(updateClock, 60 * 1000);
+
+      // ---------- Weather data (demo object) ----------
+      const weather = {
+        paris: { tempC: 18.3, tempF: 64.9, humidity: 77 },
+        tokyo: { tempC: 22.6, tempF: 72.7, humidity: 65 },
+        lisbon: { tempC: 25.1, tempF: 77.2, humidity: 55 },
+        sanfrancisco: { tempC: 16.8, tempF: 62.3, humidity: 80 },
+        oslo: { tempC: 12.4, tempF: 54.3, humidity: 70 },
+      };
+
+      // ---------- ONE function to show the weather alert ----------
+      function showWeatherAlert(cityRaw) {
+        const key = keyFromCity(cityRaw);
+        const display = titleCaseCity(cityRaw);
+
+        if (weather[key]) {
+          const { tempC, tempF, humidity } = weather[key];
+          const c = Math.round(tempC);
+          const f = Math.round(tempF);
+          const h = Math.round(humidity);
+          alert(
+            `It is currently ${c}°C (${f}°F) in ${display} with a humidity of ${h}%`
+          );
+        } else {
+          alert(
+            `Sorry, we don't know the weather for this city, try going to https://www.google.com/search?q=weather+${display}`
+          );
+        }
+      }
+
+      // ---------- Search: display city + (also show weather alert) ----------
+      const searchForm = document.getElementById("city-search");
+      const searchInput = document.getElementById("search-input");
+      const cityResult = document.getElementById("city-result");
+
+      searchForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const raw = searchInput.value;
+        const display = titleCaseCity(raw);
+        cityResult.textContent = display;
+        showWeatherAlert(raw); // <- this line restores the alert via search
+      });
+
+      // ---------- On-load prompt -> alert ----------
+      window.addEventListener("load", () => {
+        // Small delay helps in some preview iframes
+        setTimeout(() => {
+          const raw = prompt("Enter a city");
+          if (raw) showWeatherAlert(raw);
+        }, 200);
+      });
+    </script>
+  </body>
+</html>

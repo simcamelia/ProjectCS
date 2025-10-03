@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>City Weather Search</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(to bottom right, #4e54c8, #8f94fb);
+        color: #333;
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1 {
+        color: #fff;
+      }
+      form {
+        margin: 1rem 0;
+      }
+      input {
+        padding: 0.5rem;
+        font-size: 1rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        margin-left: 0.5rem;
+        background: #333;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+      #results {
+        margin-top: 2rem;
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        width: 300px;
+        text-align: center;
+      }
+      #result-error {
+        color: #c00;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>City Weather Search</h1>
+
+    <!-- Search form -->
+    <form id="search-form" autocomplete="off">
+      <input
+        id="city-input"
+        type="text"
+        placeholder="Enter a city (e.g. Sydney)"
+        required
+      />
+      <button type="submit">Search</button>
+    </form>
+
+    <!-- Results area -->
+    <section id="results">
+      <h2 id="result-city"></h2>
+      <p id="result-temp"></p>
+      <p id="result-error"></p>
+    </section>
+
+    <script>
+      function cToF(c) {
+        return (c * 9) / 5 + 32;
+      }
+
+      async function geocodeCity(name) {
+        const url =
+          "https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=" +
+          encodeURIComponent(name);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Geocoding request failed");
+        const data = await res.json();
+        if (!data.results || !data.results.length)
+          throw new Error("City not found");
+        const r = data.results[0];
+        return {
+          name: r.name,
+          country: r.country,
+          lat: r.latitude,
+          lon: r.longitude,
+        };
+      }
+
+      async function fetchCurrentTemp(lat, lon) {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Weather request failed");
+        const data = await res.json();
+        const cw = data.current_weather;
+        if (!cw || typeof cw.temperature !== "number")
+          throw new Error("No current temperature available");
+        return cw.temperature;
+      }
+
+      const form = document.getElementById("search-form");
+      const input = document.getElementById("city-input");
+      const cityEl = document.getElementById("result-city");
+      const tempEl = document.getElementById("result-temp");
+      const errEl = document.getElementById("result-error");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errEl.textContent = "";
+        cityEl.textContent = "Loading…";
+        tempEl.textContent = "";
+
+        const raw = input.value.trim();
+        if (!raw) return;
+
+        try {
+          const geo = await geocodeCity(raw);
+          const tempC = await fetchCurrentTemp(geo.lat, geo.lon);
+          const displayCity = `${geo.name}, ${geo.country}`;
+          const tempF = cToF(tempC);
+          cityEl.textContent = displayCity;
+          tempEl.textContent = `Current temperature: ${Math.round(
+            tempC
+          )}°C (${Math.round(tempF)}°F)`;
+        } catch (err) {
+          cityEl.textContent = "";
+          tempEl.textContent = "";
+          errEl.textContent =
+            err.message === "City not found"
+              ? `Sorry, we don't know the weather for this city, try going to https://www.google.com/search?q=weather+${encodeURIComponent(
+                  raw
+                )}`
+              : "Sorry, something went wrong. Please try again.";
+          console.error(err);
+        }
+      });
+    </script>
+  </body>
+</html>
