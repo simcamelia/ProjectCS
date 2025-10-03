@@ -32,11 +32,11 @@
     <div class="card">
       <h1 id="city">Paris</h1>
       <p class="date" id="date">Wednesday 11:17</p>
-      <p class="desc">moderate rain</p>
-      <p class="meta">Humidity: 87%, Wind: 7.2km/h</p>
+      <p class="desc" id="desc">—</p>
+      <p class="meta">Humidity: <span id="humidity">—</span>%, Wind: <span id="wind">—</span> km/h</p>
       <div class="temp" aria-label="current temperature">
-        <span style="font-size:48px;vertical-align:middle">☀️</span>
-        <span id="temp">24°C</span>
+        <img id="icon" alt="" width="56" height="56" style="vertical-align:middle;margin-right:8px" />
+        <span id="temp">—°C</span>
       </div>
 
       <footer>
@@ -48,15 +48,100 @@
   </div>
 
   <script>
-    // Match the demo look-and-feel while keeping time fresh
-    (function updateDate(){
-      const el = document.getElementById('date');
+    // === Open-Meteo hook (no API key required) ===
+    const GEO = (q)=>`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`;
+    const FORE = (lat, lon)=>`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`;
+
+    const cityEl = document.getElementById('city');
+    const dateEl = document.getElementById('date');
+    const descEl = document.getElementById('desc');
+    const tempEl = document.getElementById('temp');
+    const humEl = document.getElementById('humidity');
+    const windEl = document.getElementById('wind');
+    const iconEl = document.getElementById('icon');
+
+    const form = document.getElementById('city-form');
+    const input = document.getElementById('city-input');
+
+    function updateDate(){
       const d = new Date();
       const weekday = d.toLocaleString(undefined,{weekday:'long'});
       const hh = String(d.getHours()).padStart(2,'0');
       const mm = String(d.getMinutes()).padStart(2,'0');
-      el.textContent = `${weekday} ${hh}:${mm}`;
-    })();
+      dateEl.textContent = `${weekday} ${hh}:${mm}`;
+    }
+
+    function codeToText(code){
+      const map = {
+        0: 'Clear', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Cloudy',
+        45: 'Fog', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Dense drizzle',
+        61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain', 67: 'Freezing rain',
+        71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains',
+        80: 'Light showers', 81: 'Showers', 82: 'Heavy showers', 85: 'Snow showers', 86: 'Snow showers',
+        95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Thunderstorm with hail'
+      };
+      return map[code] || 'Weather';
+    }
+    function codeToIcon(code){
+      // Use OpenWeather public icon set mapped from Open-Meteo codes
+      const map = {
+        0: '01d', 1: '02d', 2: '03d', 3: '04d', 45: '50d', 48: '50d',
+        51: '09d', 53: '09d', 55: '09d', 61: '10d', 63: '10d', 65: '10d',
+        66: '10d', 67: '10d', 71: '13d', 73: '13d', 75: '13d', 77: '13d',
+        80: '09d', 81: '09d', 82: '09d', 85: '13d', 86: '13d', 95: '11d', 96: '11d', 99: '11d'
+      };
+      return map[code] || '01d';
+    }
+
+    async function fetchJSON(url){
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function loadCity(q){
+      cityEl.textContent = 'Searching…';
+      try{
+        const geo = await fetchJSON(GEO(q));
+        if(!geo.results || geo.results.length===0){
+          alert('City not found. Try another search.');
+          cityEl.textContent = q;
+          return;
+        }
+        const g = geo.results[0];
+        const label = `${g.name}${g.admin1?`, ${g.admin1}`:''}${g.country?`, ${g.country}`:''}`;
+        cityEl.textContent = label;
+        const data = await fetchJSON(FORE(g.latitude, g.longitude));
+        renderCurrent(data);
+      }catch(err){
+        console.error(err);
+        alert('Something went wrong fetching weather.');
+      }
+    }
+
+    function renderCurrent(data){
+      const c = data.current;
+      const code = c.weather_code;
+      descEl.textContent = codeToText(code);
+      tempEl.textContent = `${Math.round(c.temperature_2m)}°C`;
+      humEl.textContent = Math.round(c.relative_humidity_2m);
+      windEl.textContent = (c.wind_speed_10m).toFixed(1);
+      iconEl.src = `https://openweathermap.org/img/wn/${codeToIcon(code)}@2x.png`;
+      iconEl.alt = descEl.textContent;
+      updateDate();
+    }
+
+    // Hook up form
+    form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const q = (input.value||'').trim();
+      if(!q){ alert('Please type a city'); input.focus(); return; }
+      loadCity(q);
+      input.value='';
+    });
+
+    // Initial load to match demo
+    loadCity('Paris');
   </script>
 </body>
 </html>
