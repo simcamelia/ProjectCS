@@ -3,139 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>My First SheCodes Project — Camelia Simion</title>
+  <title>My first SheCodes project — Camelia Simion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#f7fafc;--card:#ffffff;--text:#0f172a;--muted:#64748b;--accent:#2563eb;--ring:rgba(37,99,235,.14);
-    }
+    :root{--bg:#ffffff;--text:#1f2937;--muted:#6b7280;--card:#ffffff;--border:#e5e7eb;--accent:#6c63ff}
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:920px;margin:0 auto;padding:32px}
-    .card{background:var(--card);border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 14px 40px rgba(2,6,23,.06);overflow:hidden}
-    header{padding:18px 22px;border-bottom:1px solid #eef2f7;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    header h1{font-size:20px;margin:0}
 
-    .content{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:22px}
-    @media (max-width:860px){.content{grid-template-columns:1fr}}
-    .hero{padding:18px;border:1px solid #eef2f7;border-radius:14px;display:flex;flex-direction:column;gap:10px}
-    .hero h2{margin:0;font-size:28px;letter-spacing:-.02em}
-    .hero p{margin:0;color:var(--muted)}
+    .wrap{max-width:580px;margin:60px auto;padding:0 20px}
+    .card{border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:0 10px 28px rgba(2,6,23,.06);background:var(--card)}
 
-    .panel{padding:18px;border:1px solid #eef2f7;border-radius:14px}
-    .panel h3{margin:0 0 8px 0;font-size:16px}
+    h1{margin:0 0 10px 0;font-size:42px;letter-spacing:-.02em}
+    .date{color:var(--muted);font-size:14px;margin-bottom:16px}
+    .desc{font-size:18px;margin:0 0 8px 0}
+    .meta{color:var(--muted);font-size:14px;margin:0 0 16px 0}
+    .temp{font-size:64px;font-weight:800;letter-spacing:-1px;margin:10px 0}
 
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 14px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;font-weight:600;cursor:pointer}
-    .btn:focus{outline:none;box-shadow:0 0 0 6px var(--ring)}
-    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-
-    input[type="text"]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e5e7eb}
-    input[type="text"]:focus{outline:none;box-shadow:0 0 0 6px var(--ring);border-color:var(--accent)}
-
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .tile{border:1px solid #eef2f7;border-radius:12px;padding:16px;text-align:center}
-
-    footer{padding:16px 20px;border-top:1px solid #eef2f7;color:var(--muted);font-size:14px}
-    footer a{color:var(--accent);text-decoration:none;font-weight:600}
-
-    /* Theme toggle */
-    [data-theme="dark"]{--bg:#0b1220;--card:#0e1627;--text:#e5e7eb;--muted:#98a4b3;--accent:#60a5fa;--ring:rgba(96,165,250,.22)}
-    [data-theme="dark"] .card{border-color:#152236}
-    [data-theme="dark"] .panel, [data-theme="dark"] .hero{border-color:#1f2d44}
-    [data-theme="dark"] .btn{background:#0b1220;border-color:#1f2d44;color:var(--text)}
-    [data-theme="dark"] .btn.primary{color:#0b1220}
+    footer{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:14px;color:var(--muted)}
+    footer a{color:#0ea5e9;text-decoration:none;font-weight:600}
+    footer a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card" id="app">
-      <header>
-        <h1>My First SheCodes Project</h1>
-        <div style="display:flex;gap:8px;align-items:center">
-          <label for="theme" style="font-size:14px;color:var(--muted)">Theme</label>
-          <select id="theme" class="btn" style="padding:10px 12px">
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </div>
-      </header>
-
-      <div class="content">
-        <section class="hero">
-          <h2>Hello, I’m Camelia 👋</h2>
-          <p>This is a simple interactive page inspired by the classic SheCodes first project. Try the features on the right!</p>
-          <div class="grid" style="margin-top:12px">
-            <div class="tile"><strong>Clean layout</strong><div style="font-size:12px;color:var(--muted)">Responsive & modern</div></div>
-            <div class="tile"><strong>Interactive</strong><div style="font-size:12px;color:var(--muted)">Small JS snippets</div></div>
-            <div class="tile"><strong>Themed</strong><div style="font-size:12px;color:var(--muted)">Light/Dark toggle</div></div>
-          </div>
-        </section>
-
-        <aside class="panel">
-          <h3>Playground</h3>
-          <div style="display:grid;gap:10px">
-            <label>
-              Your name
-              <input id="name" type="text" placeholder="Type your name…" />
-            </label>
-            <div style="display:flex;gap:8px">
-              <button id="greet" class="btn primary">Greet me</button>
-              <button id="surprise" class="btn">Surprise</button>
-            </div>
-            <p id="output" style="margin:6px 0 0 0;color:var(--muted)">Output will appear here…</p>
-          </div>
-        </aside>
+    <div class="card">
+      <h1 id="city">Paris</h1>
+      <p class="date" id="date">Wednesday 11:17</p>
+      <p class="desc">moderate rain</p>
+      <p class="meta">Humidity: 87%, Wind: 7.2km/h</p>
+      <div class="temp" aria-label="current temperature">
+        <span style="font-size:48px;vertical-align:middle">☀️</span>
+        <span id="temp">24°C</span>
       </div>
 
       <footer>
         This project was coded by Camelia Simion, and is on
-        <a href="https://github.com/simcamelia/ProjectCS" target="_blank" rel="noopener">Github</a>,
-        and hosted on
+        <a href="https://github.com/simcamelia/ProjectCS" target="_blank" rel="noopener">Github</a>, and hosted on
         <a href="https://simcam.netlify.app/" target="_blank" rel="noopener">Netlify</a>.
       </footer>
     </div>
   </div>
 
   <script>
-    const themeSel = document.getElementById('theme');
-    const output = document.getElementById('output');
-    const nameInput = document.getElementById('name');
-    const greetBtn = document.getElementById('greet');
-    const surpriseBtn = document.getElementById('surprise');
-
-    // Theme handling
-    function applyTheme(t){
-      document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light');
-      themeSel.value = t;
-      try{ localStorage.setItem('first-project-theme', t);}catch{}
-    }
-    themeSel.addEventListener('change', ()=> applyTheme(themeSel.value));
-    (function initTheme(){
-      let saved = 'light';
-      try{ saved = localStorage.getItem('first-project-theme') || 'light'; }catch{}
-      applyTheme(saved);
+    // Match the demo look-and-feel while keeping time fresh
+    (function updateDate(){
+      const el = document.getElementById('date');
+      const d = new Date();
+      const weekday = d.toLocaleString(undefined,{weekday:'long'});
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      el.textContent = `${weekday} ${hh}:${mm}`;
     })();
-
-    // Interactions
-    greetBtn.addEventListener('click', ()=>{
-      const who = nameInput.value.trim() || 'there';
-      output.style.color = 'var(--text)';
-      output.textContent = `Nice to meet you, ${who}! ✨`;
-    });
-    surpriseBtn.addEventListener('click', ()=>{
-      const facts = [
-        'JavaScript was created in 10 days.',
-        'CSS stands for Cascading Style Sheets.',
-        'HTML is not a programming language — it\'s a markup language.',
-        'Dark mode can reduce eye strain at night.'
-      ];
-      const pick = facts[Math.floor(Math.random()*facts.length)];
-      output.style.color = 'var(--muted)';
-      output.textContent = `🤓 Fun fact: ${pick}`;
-    });
   </script>
 </body>
 </html>
