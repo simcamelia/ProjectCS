@@ -53,7 +53,7 @@
     .units{display:flex;gap:8px;align-items:flex-start;margin-left:6px}
     .unit{color:var(--muted);font-weight:600;cursor:pointer}
     .unit.active{color:var(--text)}
-    .desc{font-weight:600;text-transform:capitalize}
+    .desc{font-weight:600;text-transform:capitalize;display:flex;align-items:center;gap:8px;font-size:18px}
     .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
     .meta div{background:#f8fafc;border:1px solid #eef2f7;padding:10px;border-radius:10px;font-size:14px}
 
@@ -91,7 +91,6 @@
           <div class="date" id="date">—</div>
 
           <div class="weather-row">
-            <img id="icon" alt="" width="84" height="84" />
             <div class="temp" id="temp">–</div>
             <div class="units">
               <span class="unit" id="c">°C</span>
@@ -99,7 +98,7 @@
               <span class="unit" id="f">°F</span>
             </div>
           </div>
-          <div class="desc" id="desc">—</div>
+          <div class="desc"><img id="icon" alt="" width="40" height="40" /><span id="desc">—</span></div>
           <div class="meta">
             <div>Humidity: <strong id="humidity">—</strong>%</div>
             <div>Wind: <strong id="wind">—</strong> m/s</div>
@@ -125,11 +124,9 @@
   </div>
 
   <script>
-    // === Zero-key Weather using Open-Meteo ===
     const GEO = (q)=>`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`;
     const FORE = (lat, lon)=>`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=7`;
 
-    // === Elements ===
     const elCity = document.getElementById('city');
     const elDate = document.getElementById('date');
     const elIcon = document.getElementById('icon');
@@ -152,25 +149,56 @@
       return d.toLocaleString(undefined,{weekday:'long', hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
     }
 
-    function codeToEmoji(code){
-      const map = new Map([
-        [[0], '☀️ Clear'],
-        [[1,2], '🌤️ Partly cloudy'],
-        [[3], '☁️ Cloudy'],
-        [[45,48], '🌫️ Fog'],
-        [[51,53,55], '🌦️ Drizzle'],
-        [[56,57], '🌧️ Freezing drizzle'],
-        [[61,63,65], '🌧️ Rain'],
-        [[66,67], '🌧️ Freezing rain'],
-        [[71,73,75], '🌨️ Snow'],
-        [[77], '🌨️ Snow grains'],
-        [[80,81,82], '🌧️ Showers'],
-        [[85,86], '🌨️ Snow showers'],
-        [[95], '⛈️ Thunderstorm'],
-        [[96,99], '⛈️ Thunderstorm + hail']
-      ]);
-      for (const [keys, label] of map){ if(keys.includes(code)) return label; }
-      return '🌡️ Weather';
+    function codeToIcon(code){
+      // Using OpenWeather icons for simplicity
+      const map = {
+        0: "01d", // clear
+        1: "02d", // partly cloudy
+        2: "03d", // cloudy
+        3: "04d", // overcast
+        45: "50d", 48: "50d", // fog
+        51: "09d", 53: "09d", 55: "09d", // drizzle
+        61: "10d", 63: "10d", 65: "10d", // rain
+        66: "10d", 67: "10d", // freezing rain
+        71: "13d", 73: "13d", 75: "13d", // snow
+        77: "13d",
+        80: "09d", 81: "09d", 82: "09d", // showers
+        85: "13d", 86: "13d", // snow showers
+        95: "11d", 96: "11d", 99: "11d" // thunderstorms
+      };
+      return map[code] || "01d";
+    }
+
+    function codeToText(code){
+      const map = {
+        0: "Clear",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Cloudy",
+        45: "Fog",
+        48: "Rime fog",
+        51: "Light drizzle",
+        53: "Drizzle",
+        55: "Dense drizzle",
+        61: "Light rain",
+        63: "Rain",
+        65: "Heavy rain",
+        66: "Freezing rain",
+        67: "Freezing rain",
+        71: "Light snow",
+        73: "Snow",
+        75: "Heavy snow",
+        77: "Snow grains",
+        80: "Light showers",
+        81: "Showers",
+        82: "Heavy showers",
+        85: "Snow showers",
+        86: "Snow showers",
+        95: "Thunderstorm",
+        96: "Thunderstorm with hail",
+        99: "Thunderstorm with hail"
+      };
+      return map[code] || "Weather";
     }
 
     function showError(msg=''){ elError.textContent = msg; }
@@ -230,16 +258,14 @@
     }
 
     function renderCurrentFromForecast(data, label){
-      // current
       state.city = label || '—';
       elCity.textContent = state.city;
       elDate.textContent = formatDate(Date.now());
       const current = data.current;
       const code = current.weather_code;
-      const em = codeToEmoji(code);
-      elDesc.textContent = em.split(' ').slice(1).join(' ') || em; // Text label
+      elDesc.textContent = codeToText(code);
+      elIcon.src = `https://openweathermap.org/img/wn/${codeToIcon(code)}@2x.png`;
       elIcon.alt = elDesc.textContent;
-      elIcon.src = '';// (emoji shown in description)
       state.tempC = current.temperature_2m ?? null;
       setUnits(state.unit);
       elHumidity.textContent = Math.round(current.relative_humidity_2m ?? 0);
@@ -249,7 +275,7 @@
     function renderForecast(data){
       const daily = data.daily;
       const days = [];
-      for(let i=1; i<Math.min(daily.time.length,7); i++){ // skip today, next 6
+      for(let i=1; i<Math.min(daily.time.length,7); i++){
         days.push({
           ts: new Date(daily.time[i]).getTime(),
           code: daily.weather_code[i],
@@ -259,16 +285,14 @@
       }
       elForecast.innerHTML = days.map(d=>{
         const name = new Date(d.ts).toLocaleDateString(undefined,{weekday:'short'});
-        const label = codeToEmoji(d.code).split(' ')[0]; // emoji only
         return `<div class="day">
           <div class="name">${name}</div>
-          <div style="font-size:32px;line-height:1.2">${label}</div>
+          <img src="https://openweathermap.org/img/wn/${codeToIcon(d.code)}@2x.png" alt="${codeToText(d.code)}" width="50" height="50" />
           <div class="t">${Math.round(d.max)}° / ${Math.round(d.min)}°</div>
         </div>`;
       }).join('');
     }
 
-    // === Events ===
     form.addEventListener('submit', (e)=>{
       e.preventDefault();
       const q = input.value.trim();
@@ -287,10 +311,8 @@
       }, ()=> showError('Location permission denied.'), {enableHighAccuracy:false, timeout:8000});
     });
 
-    // Initial city
     loadCity('London');
   </script>
 </body>
 </html>
-
 
